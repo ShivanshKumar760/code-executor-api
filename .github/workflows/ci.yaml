@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: my-org/gitops
+          repository: ShivanshKumar760/gitops
           token: ${{ secrets.DEPLOY_REPO_TOKEN }}
           path: deploy
       - uses: imranismail/setup-kustomize@v2
