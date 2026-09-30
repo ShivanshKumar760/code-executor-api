@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Code Executor</title>
+<style>
+  :root { --bg:#0f1419; --panel:#161b22; --line:#262d36; --text:#e6edf3; --muted:#8b949e;
+          --accent:#3b82f6; --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0; flex:1; }
+  header h1 span { color:var(--accent); }
+  .user { color:var(--muted); font-size:13px; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:8px 16px; font-size:14px; cursor:pointer; font-weight:600; }
+  button:hover { filter:brightness(1.1); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--text); font-weight:400; }
+  main { flex:1; display:flex; flex-direction:column; min-height:0; }
+  #editor { flex:1; min-height:0; }
+  #bar { display:flex; align-items:center; gap:12px; padding:8px 16px; background:var(--panel); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  #bar .hint { color:var(--muted); font-size:12px; flex:1; }
+  .badge { font-size:12px; font-weight:700; padding:3px 10px; border-radius:99px; background:var(--line); color:var(--muted); }
+  .badge.Succeeded { background:rgba(34,197,94,.15); color:var(--ok); }
+  .badge.Failed, .badge.Error { background:rgba(239,68,68,.15); color:var(--bad); }
+  .badge.Timeout, .badge.running { background:rgba(245,158,11,.15); color:var(--warn); }
+  #output { height:32%; min-height:120px; margin:0; padding:12px 16px; overflow:auto; background:#0b0f14;
+            font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre-wrap; }
+  #output.err { color:#fca5a5; }
+  #output.empty { color:var(--muted); }
+  /* login overlay */
+  #auth { position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; z-index:10; }
+  #auth.hidden { display:none; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:28px; width:340px; }
+  .card h2 { margin:0 0 4px; } .card p { margin:0 0 18px; color:var(--muted); font-size:13px; }
+  .card input { width:100%; padding:10px; margin-bottom:10px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; font-size:14px; }
+  .card .row { display:flex; gap:8px; } .card .row button { flex:1; }
+  #authMsg { min-height:18px; font-size:13px; color:var(--bad); margin-top:10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#9654; <span>Code</span> Executor</h1>
+  <span class="user" id="who"></span>
+  <button class="ghost" id="logout" style="display:none">Log out</button>
+</header>
+
+<main>
+  <div id="editor"></div>
+  <div id="bar">
+    <button id="run">Run &#9654;</button>
+    <span class="hint">Ctrl/Cmd + Enter to run &middot; Python 3.11 &middot; 15s limit</span>
+    <span class="badge" id="status">idle</span>
+  </div>
+  <pre id="output" class="empty">Output appears here.</pre>
+</main>
+
+<div id="auth">
+  <div class="card">
+    <h2>Sign in</h2>
+    <p>Lowercase letters and numbers only, 3&ndash;20 characters.</p>
+    <input id="u" placeholder="username" autocomplete="username" />
+    <input id="p" type="password" placeholder="password" autocomplete="current-password" />
+    <div class="row">
+      <button id="loginBtn">Log in</button>
+      <button id="regBtn" class="ghost">Register</button>
+    </div>
+    <div id="authMsg"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const DEFAULT_CODE = `# Write Python here, then press Run (Ctrl/Cmd + Enter)
+import platform
+
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+print("Hello from inside a Kubernetes pod!")
+print("Python", platform.python_version())
+print(list(fib(10)))
+`;
+
+let token = sessionStorage.getItem('token');
+let username = sessionStorage.getItem('username');
+let editor;
+
+// ---------- auth ----------
+function showAuth(msg) { $('auth').classList.remove('hidden'); $('authMsg').textContent = msg || ''; }
+function setUser() {
+  $('who').textContent = username ? 'Signed in as ' + username : '';
+  $('logout').style.display = token ? '' : 'none';
+  $('auth').classList.toggle('hidden', !!token);
+}
+async function api(path, body, auth) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(path, { method: 'POST', headers, body: JSON.stringify(body) });
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  return { ok: res.ok, status: res.status, data };
+}
+async function login() {
+  const u = $('u').value.trim(), p = $('p').value;
+  const r = await api('/login', { username: u, password: p });
+  if (!r.ok) return showAuth(r.data.error || 'Login failed');
+  token = r.data.access_token; username = u;
+  sessionStorage.setItem('token', token); sessionStorage.setItem('username', u);
+  setUser();
+}
+async function register() {
+  const u = $('u').value.trim(), p = $('p').value;
+  const r = await api('/register', { username: u, password: p });
+  if (!r.ok) return showAuth(r.data.error || 'Registration failed');
+  await login();
+}
+$('loginBtn').onclick = login;
+$('regBtn').onclick = register;
+$('p').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+$('logout').onclick = () => {
+  token = username = null; sessionStorage.clear(); setUser(); showAuth('');
+};
+
+// ---------- run ----------
+function setStatus(text, cls) { const s = $('status'); s.textContent = text; s.className = 'badge ' + (cls || ''); }
+function show(text, isErr) {
+  const o = $('output');
+  o.textContent = text; o.className = isErr ? 'err' : (text ? '' : 'empty');
+}
+async function run() {
+  if (!token) return showAuth('Please sign in first');
+  const code = editor.getValue();
+  if (!code.trim()) return;
+  $('run').disabled = true;
+  setStatus('running…', 'running'); show('Starting a pod…');
+  const t0 = performance.now();
+  try {
+    const r = await api('/execute', { code }, true);
+    if (r.status === 401 || r.status === 422) {
+      token = null; sessionStorage.clear(); setUser();
+      setStatus('idle'); show(''); return showAuth('Session expired — sign in again');
+    }
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    if (!r.ok) { setStatus('Error', 'Error'); show(r.data.error || 'Request failed', true); return; }
+    const st = r.data.status;
+    setStatus(st + ' · ' + secs + 's', st);
+    show(r.data.output || '(no output)', st !== 'Succeeded');
+  } catch (e) {
+    setStatus('Error', 'Error'); show(String(e), true);
+  } finally {
+    $('run').disabled = false;
+  }
+}
+$('run').onclick = run;
+
+// ---------- Monaco ----------
+require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } });
+require(['vs/editor/editor.main'], () => {
+  editor = monaco.editor.create($('editor'), {
+    value: localStorage.getItem('draft') || DEFAULT_CODE,
+    language: 'python', theme: 'vs-dark', automaticLayout: true,
+    fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false, tabSize: 4,
+  });
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, run);
+  editor.onDidChangeModelContent(() => localStorage.setItem('draft', editor.getValue()));
+});
+
+setUser();
+</script>
+</body>
+</html>
