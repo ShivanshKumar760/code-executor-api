@@ -17,7 +17,7 @@ jwt = JWTManager(app)
 CODE_ROOT = "/code"                                    # where the shared PVC is mounted in THIS pod
 NAMESPACE = os.environ.get('POD_NAMESPACE', 'code-exec')
 EXECUTOR_IMAGE = "python:3.11-slim"                     # a plain public image — no custom build needed
-
+print(CODE_ROOT)
 
 # ---------------------------------------------------------------------------
 # User model (Flask-SQLAlchemy) — one table, hashed passwords only, never plaintext
