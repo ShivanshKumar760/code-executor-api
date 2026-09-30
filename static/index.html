@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -174,6 +174,377 @@ require(['vs/editor/editor.main'], () => {
 });
 
 setUser();
+</script>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Runpod Cloud · Run Python in a fresh container</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+<style>
+:root{
+  --bg:#0e1525; --panel:#1c2333; --panel2:#151c2c; --line:#2b3245; --text:#f5f9fc; --muted:#9aa4b8;
+  --accent:#f26207; --accent2:#ff8a3d; --ok:#2ad17b; --err:#ff6b6b; --blue:#0079f2;
+  --sans:"Inter","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:20;background:rgba(14,21,37,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+.logo i{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#ff3d6e);display:grid;place-items:center;font-style:normal;font-size:15px}
+.links{display:flex;gap:28px;color:var(--muted);font-size:15px}
+.links a:hover{color:var(--text)}
+.actions{display:flex;gap:10px;align-items:center}
+.btn{font:600 14px var(--sans);border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 16px;border-radius:8px;cursor:pointer;transition:background .15s,transform .05s}
+.btn:hover{background:#252d42}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--text);background:transparent}
+.who{color:var(--muted);font-size:14px}.who b{color:var(--text)}
+.hide{display:none!important}
+
+/* hero */
+.hero{padding:88px 0 40px;text-align:center;position:relative;overflow:hidden}
+.hero:before{content:"";position:absolute;inset:-40% -10% auto;height:520px;background:radial-gradient(closest-side,rgba(242,98,7,.22),transparent 70%),radial-gradient(closest-side at 80% 30%,rgba(0,121,242,.18),transparent 70%);pointer-events:none}
+.hero>.wrap{position:relative}
+h1{font-size:clamp(38px,6.4vw,72px);line-height:1.04;letter-spacing:-.035em;font-weight:800;max-width:14ch;margin:0 auto 22px}
+.sub{color:var(--muted);font-size:clamp(17px,2vw,20px);max-width:56ch;margin:0 auto 32px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.cta .btn{padding:14px 26px;font-size:16px;border-radius:10px}
+
+/* ide */
+.ide{margin:56px auto 0;max-width:960px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:7px}.dots span{width:11px;height:11px;border-radius:50%;background:#3a4258}
+.tab{font:13px var(--mono);color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-bottom:none;padding:5px 12px;border-radius:6px 6px 0 0;margin-bottom:-11px;padding-bottom:9px}
+.run{display:flex;align-items:center;gap:8px;background:var(--ok);color:#04231a;border:0;font:700 14px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer}
+.run:hover{filter:brightness(1.1)}
+.run:disabled{opacity:.6;cursor:wait}
+.run kbd{font:11px var(--mono);background:rgba(0,0,0,.18);padding:1px 6px;border-radius:4px}
+.panes{display:grid;grid-template-columns:1.25fr 1fr}
+.editor{display:flex;min-height:320px;border-right:1px solid var(--line)}
+.gutter{font:14px/1.7 var(--mono);color:#4b556e;text-align:right;padding:16px 10px 16px 14px;user-select:none;white-space:pre;overflow:hidden;min-width:44px}
+#code{flex:1;background:transparent;border:0;resize:none;color:#e6edf7;font:14px/1.7 var(--mono);padding:16px 14px 16px 6px;outline:none;tab-size:4;white-space:pre;overflow:auto}
+.console{display:flex;flex-direction:column;min-width:0}
+.chead{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.pill{font:600 12px var(--mono);padding:2px 9px;border-radius:99px;background:#252d42;color:var(--muted)}
+.pill.ok{background:rgba(42,209,123,.15);color:var(--ok)}
+.pill.bad{background:rgba(255,107,107,.15);color:var(--err)}
+.pill.busy{background:rgba(242,98,7,.15);color:var(--accent2)}
+#out{flex:1;font:13.5px/1.65 var(--mono);padding:14px;white-space:pre-wrap;word-break:break-word;color:#cfd8e8;overflow:auto;max-height:340px}
+#out.err{color:var(--err)}
+#out .hint{color:#5b657f}
+.spin{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* sections */
+section{padding:96px 0}
+h2{font-size:clamp(28px,4vw,42px);letter-spacing:-.03em;line-height:1.1;margin-bottom:14px}
+.lead{color:var(--muted);max-width:60ch;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:26px}
+.card h3{font-size:18px;margin:14px 0 8px;letter-spacing:-.01em}
+.card p{color:var(--muted);font-size:15px}
+.ico{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:rgba(242,98,7,.14)}
+.card:nth-child(2) .ico{background:rgba(0,121,242,.16)}
+.card:nth-child(3) .ico{background:rgba(42,209,123,.14)}
+.steps{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center}
+.steps ol{list-style:none;padding:0;margin-top:32px;counter-reset:s;display:grid;gap:20px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:36px 1fr;gap:16px}
+.steps li:before{content:counter(s);width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;font:700 14px var(--mono);color:var(--accent2)}
+.steps li b{display:block;margin-bottom:2px}.steps li span{color:var(--muted);font-size:15px}
+pre.term{background:#0a0f1c;border:1px solid var(--line);border-radius:14px;padding:22px;font:13px/1.8 var(--mono);color:#b8c3d9;overflow-x:auto}
+pre.term .g{color:var(--ok)}pre.term .o{color:var(--accent2)}pre.term .m{color:#5b657f}
+.band{margin:0 auto;text-align:center;background:linear-gradient(135deg,rgba(242,98,7,.16),rgba(0,121,242,.14));border:1px solid var(--line);border-radius:20px;padding:64px 24px}
+.band p{color:var(--muted);margin:0 auto 28px;max-width:46ch}
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* modal */
+dialog{margin:auto;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);padding:0;width:min(400px,92vw);box-shadow:0 30px 90px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(5,8,16,.7);backdrop-filter:blur(3px)}
+.mbody{padding:28px}
+.mbody h3{font-size:22px;letter-spacing:-.02em;margin-bottom:4px}
+.mbody p.s{color:var(--muted);font-size:14px;margin-bottom:20px}
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);font:15px var(--sans);padding:11px 13px;border-radius:8px}
+input:focus{outline:none;border-color:var(--accent2)}
+.help{font-size:12px;color:#6b7590;margin-top:5px}
+.msg{min-height:20px;font-size:14px;margin-top:14px;color:var(--err)}
+.msg.good{color:var(--ok)}
+.mbody .btn.primary{width:100%;margin-top:6px;padding:12px}
+.swap{text-align:center;font-size:14px;color:var(--muted);margin-top:16px}
+.swap button{background:none;border:0;color:var(--accent2);font:600 14px var(--sans);cursor:pointer}
+
+@media(max-width:820px){
+  .links{display:none}
+  .panes{grid-template-columns:1fr}.editor{border-right:0;border-bottom:1px solid var(--line)}
+  .grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr;gap:32px}
+  section{padding:64px 0}.hero{padding-top:56px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#top"><i>⚡</i>Runpod Cloud</a>
+    <div class="links"><a href="#features">Features</a><a href="#how">How it works</a><a href="#try">Playground</a></div>
+    <div class="actions">
+      <span class="who hide" id="who">Signed in as <b id="whoName"></b></span>
+      <button class="btn ghost" id="loginBtn">Log in</button>
+      <button class="btn primary" id="signupBtn">Sign up</button>
+      <button class="btn hide" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <h1>Write Python. Run it in its own container.</h1>
+    <p class="sub">Paste code, press run, and get the output back in seconds. Every run starts in a fresh, isolated Kubernetes pod that disappears when it finishes.</p>
+    <div class="cta">
+      <a class="btn primary" href="#try">Start coding</a>
+      <a class="btn" href="#how">See how it works</a>
+    </div>
+
+    <div class="ide" id="try">
+      <div class="bar">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="tab">submission.py</div>
+        <button class="run" id="runBtn" title="Run (Ctrl/⌘ + Enter)">▶ Run <kbd>⌘↵</kbd></button>
+      </div>
+      <div class="panes">
+        <div class="editor">
+          <div class="gutter" id="gutter">1</div>
+          <textarea id="code" spellcheck="false" aria-label="Python code editor">import platform
+
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+print("Hello from a fresh pod!")
+print("Python", platform.python_version())
+print(list(fib(10)))</textarea>
+        </div>
+        <div class="console">
+          <div class="chead"><span>Output</span><span class="pill" id="status">idle</span></div>
+          <div id="out"><span class="hint">Press Run to execute your code.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Built for running code you don't trust yet</h2>
+    <p class="lead">A small API in front of Kubernetes. No servers to set up and nothing left running afterwards.</p>
+    <div class="grid">
+      <div class="card"><div class="ico">📦</div><h3>A new pod for every run</h3><p>Your code runs in its own <code>python:3.11-slim</code> container. Nothing carries over between runs.</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>Your files stay yours</h3><p>Each submission is mounted from its own folder, so a running program can't see anyone else's code.</p></div>
+      <div class="card"><div class="ico">⏱️</div><h3>Time and memory limits</h3><p>Runs stop after 15 seconds and are capped at 250m CPU and 128Mi of memory. Infinite loops can't hog the cluster.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how" style="padding-top:0">
+  <div class="wrap steps">
+    <div>
+      <h2>From editor to output in four steps</h2>
+      <ol>
+        <li><div><b>Sign in</b><span>Create an account and get a signed token for your session.</span></div></li>
+        <li><div><b>Submit your code</b><span>The API saves it to your own folder on shared storage.</span></div></li>
+        <li><div><b>A pod runs it</b><span>Kubernetes starts a container that can only see that folder.</span></div></li>
+        <li><div><b>Read the output</b><span>Logs come back to your screen and the pod is deleted.</span></div></li>
+      </ol>
+    </div>
+    <pre class="term"><span class="m"># or skip the editor and use the API</span>
+<span class="o">$</span> curl -X POST /execute \
+    -H "Authorization: Bearer $TOKEN" \
+    -d '{"code": "print(2 + 2)"}'
+
+<span class="g">{"status": "Succeeded",
+ "output": "4\n"}</span></pre>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap"><div class="band">
+    <h2>Run your first script now</h2>
+    <p>Sign-up takes a username and a password. No email, no card.</p>
+    <button class="btn primary" style="padding:14px 28px;font-size:16px;border-radius:10px" id="ctaSignup">Create a free account</button>
+  </div></div>
+</section>
+
+<footer><div class="wrap"><span>© <span id="yr"></span> Runpod Cloud</span><span>Demo project · runs on Kubernetes</span></div></footer>
+
+<dialog id="dlg">
+  <div class="mbody">
+    <h3 id="dTitle">Log in</h3>
+    <p class="s" id="dSub">Welcome back. Log in to run your code.</p>
+    <label for="u">Username</label>
+    <input id="u" autocomplete="username" autocapitalize="off" maxlength="20">
+    <div class="help hide" id="uHelp">3–20 characters. Lowercase letters and numbers only.</div>
+    <label for="p">Password</label>
+    <input id="p" type="password" autocomplete="current-password">
+    <div class="msg" id="msg" role="alert"></div>
+    <button class="btn primary" id="submitAuth">Log in</button>
+    <div class="swap"><span id="swapText">New here?</span> <button id="swapBtn">Create an account</button></div>
+  </div>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+const code = $('code'), gutter = $('gutter'), out = $('out'), status = $('status'), runBtn = $('runBtn');
+const dlg = $('dlg');
+let token = null, user = null, mode = 'login';
+
+try { token = localStorage.getItem('token'); user = localStorage.getItem('user'); } catch (e) {}
+$('yr').textContent = new Date().getFullYear();
+if (!/Mac|iPhone|iPad/.test(navigator.platform)) runBtn.querySelector('kbd').textContent = 'Ctrl↵';
+
+/* ---------- editor ---------- */
+function syncGutter() {
+  const n = code.value.split('\n').length;
+  gutter.textContent = Array.from({length: n}, (_, i) => i + 1).join('\n');
+  gutter.scrollTop = code.scrollTop;
+}
+code.addEventListener('input', syncGutter);
+code.addEventListener('scroll', () => gutter.scrollTop = code.scrollTop);
+code.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = code.selectionStart;
+    code.setRangeText('    ', s, code.selectionEnd, 'end');
+    syncGutter();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+});
+syncGutter();
+
+/* ---------- auth state ---------- */
+function renderAuth() {
+  const on = !!token;
+  $('loginBtn').classList.toggle('hide', on);
+  $('signupBtn').classList.toggle('hide', on);
+  $('logoutBtn').classList.toggle('hide', !on);
+  $('who').classList.toggle('hide', !on);
+  $('whoName').textContent = user || '';
+}
+function setSession(t, u) {
+  token = t; user = u;
+  try { t ? (localStorage.setItem('token', t), localStorage.setItem('user', u)) : (localStorage.removeItem('token'), localStorage.removeItem('user')); } catch (e) {}
+  renderAuth();
+}
+$('logoutBtn').onclick = () => { setSession(null, null); setStatus('idle'); out.innerHTML = '<span class="hint">You are logged out. Log in to run code.</span>'; };
+renderAuth();
+
+/* ---------- dialog ---------- */
+function openDlg(m) {
+  mode = m;
+  const reg = m === 'register';
+  $('dTitle').textContent = reg ? 'Create your account' : 'Log in';
+  $('dSub').textContent = reg ? 'Pick a username and password to start running code.' : 'Welcome back. Log in to run your code.';
+  $('submitAuth').textContent = reg ? 'Sign up' : 'Log in';
+  $('swapText').textContent = reg ? 'Already have an account?' : 'New here?';
+  $('swapBtn').textContent = reg ? 'Log in' : 'Create an account';
+  $('uHelp').classList.toggle('hide', !reg);
+  $('p').autocomplete = reg ? 'new-password' : 'current-password';
+  $('msg').textContent = ''; $('msg').className = 'msg';
+  if (!dlg.open) dlg.showModal();
+  $('u').focus();
+}
+$('loginBtn').onclick = () => openDlg('login');
+$('signupBtn').onclick = $('ctaSignup').onclick = () => openDlg('register');
+$('swapBtn').onclick = () => openDlg(mode === 'login' ? 'register' : 'login');
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+[$('u'), $('p')].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') submitAuth(); }));
+$('submitAuth').onclick = submitAuth;
+
+async function api(path, body, auth) {
+  const headers = {'Content-Type': 'application/json'};
+  if (auth && token) headers.Authorization = 'Bearer ' + token;
+  const r = await fetch(path, {method: 'POST', headers, body: JSON.stringify(body)});
+  let data = {}; try { data = await r.json(); } catch (e) {}
+  return {ok: r.ok, status: r.status, data};
+}
+
+async function submitAuth() {
+  const username = $('u').value.trim(), password = $('p').value, msg = $('msg');
+  msg.className = 'msg';
+  if (!username || !password) { msg.textContent = 'Enter a username and password.'; return; }
+  if (mode === 'register' && !/^[a-z0-9]{3,20}$/.test(username)) {
+    msg.textContent = 'Username must be 3–20 lowercase letters or numbers.'; return;
+  }
+  const btn = $('submitAuth'); btn.disabled = true;
+  try {
+    if (mode === 'register') {
+      const r = await api('/register', {username, password});
+      if (!r.ok) { msg.textContent = r.data.error || 'Sign-up failed. Try again.'; return; }
+    }
+    const r = await api('/login', {username, password});
+    if (!r.ok) { msg.textContent = r.data.error || 'Login failed. Check your details.'; return; }
+    setSession(r.data.access_token, username);
+    dlg.close(); $('p').value = '';
+    setStatus('idle'); out.innerHTML = '<span class="hint">Signed in. Press Run to execute your code.</span>';
+  } catch (e) {
+    msg.textContent = 'Could not reach the server. Check your connection.';
+  } finally { btn.disabled = false; }
+}
+
+/* ---------- run ---------- */
+function setStatus(s, label) {
+  status.textContent = label || s;
+  status.className = 'pill ' + ({Succeeded: 'ok', Failed: 'bad', Error: 'bad', Timeout: 'bad', running: 'busy'}[s] || '');
+}
+function esc(s) { return s.replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c])); }
+
+async function run() {
+  if (!token) { openDlg('login'); return; }
+  const src = code.value;
+  if (!src.trim()) { out.innerHTML = '<span class="hint">Write some code first.</span>'; return; }
+  runBtn.disabled = true; out.className = '';
+  setStatus('running', 'starting pod…');
+  out.innerHTML = '<span class="spin"></span>Starting a container. The first run can take a little longer.';
+  const t0 = performance.now();
+  try {
+    const r = await api('/execute', {code: src}, true);
+    if (r.status === 401 || r.status === 422) {
+      setSession(null, null); setStatus('idle');
+      out.innerHTML = '<span class="hint">Your session expired. Log in again to continue.</span>';
+      openDlg('login'); return;
+    }
+    if (!r.ok) { setStatus('Error'); out.className = 'err'; out.textContent = r.data.error || r.data.msg || 'The server returned an error (' + r.status + ').'; return; }
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    setStatus(r.data.status, r.data.status + ' · ' + secs + 's');
+    out.className = r.data.status === 'Succeeded' ? '' : 'err';
+    out.innerHTML = r.data.output ? esc(r.data.output) : '<span class="hint">Finished with no output.</span>';
+    if (r.data.status === 'Timeout') out.innerHTML = '<span>Timed out. Runs must finish within 15 seconds. If this was your first run, the image may still be downloading, so try again.</span>';
+  } catch (e) {
+    setStatus('Error'); out.className = 'err'; out.textContent = 'Could not reach the server. Check your connection and try again.';
+  } finally { runBtn.disabled = false; }
+}
+runBtn.onclick = run;
 </script>
 </body>
 </html>
